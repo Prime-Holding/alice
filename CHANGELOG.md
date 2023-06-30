@@ -1,3 +1,6 @@
+# 0.3.4
+* Updated dependencies
+
 # 0.3.3
 * Updated dependencies
 * Added fix for call time for http package (by itsara-odds https://github.com/itsara-odds)
