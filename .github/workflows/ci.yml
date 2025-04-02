@@ -1,32 +1,56 @@
 name: CI
 
 on:
-  push:
   pull_request:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+defaults:
+  run:
+    shell: bash
+env:
+  PUB_ENVIRONMENT: bot.github
+permissions: read-all
 
 jobs:
-  check-format:
-      name: Check format using flutter format
-      runs-on: ubuntu-latest
-      container: cirrusci/flutter:stable
-
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v2
-        - name: Check format
-          run: flutter format -n --set-exit-if-changed .
-
-  lint:
-    name: Lint
+  analyze:
+    name: Analyze
     runs-on: ubuntu-latest
-    container: cirrusci/flutter:stable
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Get dependencies for example
-        run: flutter pub get
-        working-directory: example
-      - name: Lint using flutter analyze
-        run: flutter analyze
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - uses: actions/checkout@v4
+      - name: Install Melos
+        run: dart pub global activate melos
+      - name: Bootstrap the project
+        run: melos bootstrap
+      - name: Check the formatting of one or more Dart files
+        run: melos format --output none --set-exit-if-changed
+      - name: Analyze the project's Dart code
+        run: melos analyze --fatal-infos
+      - name: Invertase Analyze
+        uses: invertase/github-action-dart-analyzer@v3
+        with:
+          fatal-infos: true
+          fatal-warnings: true
+          working-directory: ./packages
+  test:
+    name: "Test"
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - uses: actions/checkout@v4
+      - name: Install Melos
+        run: dart pub global activate melos
+      - name: Bootstrap the project
+        run: melos bootstrap
+      - name: Run tests
+        run: melos test
+        env:
+          CI: true
